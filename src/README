@@ -1,0 +1,141 @@
+ethan.glick
+ohadklein
+
+*******************
+* UML Differences *
+*******************
+The main differences stem from the addition of public fields and functions, as well as new object types
+and packages needed for the bonus functionality. The differences are as follows:
+For generating the random terrain, we added a PerlinNoise class and put it in the pepse.util package.
+
+We also added a package called pepse.world.npcs where we put new classes needed for displaying
+NPCs (Non-Playable Characters), in this case the classes Bird and BirdMaker.
+
+We also added an interface called Damageable, which both the Avatar and Bird
+objects implement. And added a class called Projectile, which is contained in both Avatar and Bird.
+
+We also added the HUD_Element class which is contained in the PepseGameManager class.
+
+
+******************
+* Infinite World *
+******************
+For managing the infinity of terrains and trees, including giving different seeds to different 'chunks'
+of terrains + trees, we made a World class which holds a single Terrain and Tree instance.
+
+This choice was derived from our perception regarding the connection between the Terrain and Tree classes -
+for each Terrain generated, we generate trees between the Terrain's X edges, and both are created using
+a specific non-changing seed (which we also send to both classes as the same number), so it makes
+most sense to create both instances simultaneously.
+
+Packaging the Terrain and Tree classes into the World class made it easy to maintain an infinite world -
+by holding a linked-list of 3 World instances in the PepseGameManager class, each the length of
+the screen, with the currently visible world centered between the other two.
+
+This allows the avatar to wander beyond the view of the current screen in either
+direction, and still have a world to walk on.
+
+At this point, we remove the World instance that is furthest from the current section (since the avatar
+would need to pass through an entire other section before it could get to that one), and we instead add
+a new section on the opposite end of what is now the visible section. The seed given to the new instance
+is the seed of the World instance next to it, +1 if the world is created on the right side and -1 if it is
+created on the left side. This way, when going back to a World that was already generated earlier,
+the new generated World instance is guaranteed to get the exact same seed as it had before, therefore
+the creation of the Terrain and Tree instances is similar.
+
+Essentially, we insure that the currently visible world section, is always surrounded by world sections,
+which are created and destroyed based on the avatars proximity to them.
+
+
+*****************
+* trees Package *
+*****************
+We decided to implement the tree package with two classes: Tree and Leaf.
+
+Tree would be responsible to create trees in given areas, and Leaf would manage the life-cycle of each of
+the many leaves of each tree. We decided on this approach as we felt it both neatly separated the two major
+elements that together make a tree, and allowed us to provide unique functionality for interactions and
+collisions for leaves and tree trunks separately.
+
+
+*******************
+* Design Dilemmas *
+*******************
+Due to our combined coding expertise and focused effort to work out the program structure in advance,
+we were able to prevent any design dilemmas from arising during the primary stages of the project.
+As written above in detail, separating the Tree class into two different classes,
+and packaging the Terrain and Tree instances in the World class,
+were two early dilemmas whose solutions we agreed on in the very first stage of 
+planning and writing a UML-skeleton for the project.
+
+However, upon completing the mandatory elements, we began thinking of additional functionality that could
+be added. We settled on creating birds that would fly over the avatar and relieve themselves upon him,
+as well as providing the avatar with the ability to shoot down said birds.
+
+At first we thought of just having each character create a game object and throw it at the other,
+and then have the other take damage if they were hit. We quickly realised that this could be made much
+simpler, and more easily expandable, if we created a standard object to represent a projectile,
+and an interface to be used by the objects that could potentially be damaged by them.
+This lead us to create the Projectile class and the Damageable interface.
+
+Another dilemma we had was the function World.randomBetween(float, float, Random).
+Firstly, we had to decide whether to create separate functions for each class that needed
+the functionality, or to create one function to serve them all.
+
+We decided since all usages were found within the world package,
+and were in fact elements within the World, that a single function should be made and placed in the World
+class as a static function. We then formatted the function so that instead of creating new Random object on
+each usage, it would receive a Random object as an argument. This allowed us to use the function in
+conjunction with the seed requirements for the Random in most of the game elements, 
+but not all of them (such as Leaf).
+
+
+*********
+* Bonus *
+*********
+We added multiple additional elements to the game, as follows:
+
+The avatar was given a health field that goes down whenever it takes damage,
+and regenerates partially over time. If the avatars health reaches 0, the avatar dies and the game ends.
+This was achieved by adding a health field to the avatar,
+as well as creating an interface called Damageable,
+which represents an object that has health and can take damage.
+
+We added randomly-spawning birds that fly overhead, sometimes alone and sometimes in flocks.
+In order to make the game more challenging(and funny), we added the ability for the birds
+to release droppings that, if hit by them, will cause health damage to the avatar.
+
+This was done by creating two classes: Bird and BirdMaker. The bird maker class creates the Bird objects,
+either individually or in flocks, and determines their position and direction
+using a Random seeded from the games seed value.
+
+Using this same random, the birds periodically release dropping toward the ground.
+These droppings are instances of a class called Projectile. Projectile objects are programmed so that when
+they impact a Damageable object, they call that objects takeDamage() function and lower its health.
+This allows the birds to damage the avatar. However, the birds are also implementations of Damageable,
+so the avatar can fight back (as will be explained below).
+
+The avatar can also take damage if it impacts the ground at a fast enough speed - the damage taken will be
+relative to the impact speed.
+This was done by overriding the onCollisionEnter function of the avatar and checking its impact velocity
+when colliding with the ground. We use a function of this velocity to lower the avatars health.
+
+The avatar was given the ability to fire bullets to the left, right, or up. If one of these bullets hits a
+bird, the bird will die and fall beyond the bottom of the screen, at which point it will be removed
+from the gameObjectsCollection.
+Using the same Projectile class as the birds do for their droppings,
+we allow the avatar to fire bullets to the left, right, or up (using the userInputListener).
+And since Birds are Damageable, they take damage when hit by a bullet - enough damage to kill them with
+one shot! We then transition them out of view and remove them from the GameObjectsCollection.
+
+Visual displays for the avatars current health and energy, as well as for the number of birds shot down
+and the number of days the avatar has survived thus far.
+This was done by creating a single class called HUD_Element. Using a static create method which receives,
+along with location and dimension specifications, a Supplier, we are able to create an object that can
+update itself (using the update() function from GameObject) and showing the value supplied by the supplier.
+This allows us to create 4 different HUD_elements - all in different place, and each tracking a different
+value.
+
+Finally, the addition of birds and health to the avatar allowed us to add a win\lose condition to the game:
+when dying, the current play-through is finished and a message is displayed - if the player has killed
+100 birds or more a victory message is displayed, and otherwise a losing message.
